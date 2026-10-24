@@ -1,0 +1,61 @@
+{
+  "questTitle": "The Supply Chain Crypt",
+  "bossName": "The Inventory Goblin",
+  "questions": [
+    {
+      "question": "What is the primary role of a payment gateway in e-commerce?",
+      "options": [
+        "Design product landing pages",
+        "Securely transmit payment data between buyer and processor",
+        "Manage warehouse staffing schedules",
+        "Write marketing emails"
+      ],
+      "correctAnswerIndex": 1,
+      "explanation": "A payment gateway encrypts and routes card or wallet data to a payment processor so the merchant never handles raw card details directly."
+    },
+    {
+      "question": "Which metric best measures how often customers abandon carts before checkout?",
+      "options": [
+        "Cart abandonment rate",
+        "Gross margin",
+        "Page load time only",
+        "SKU count"
+      ],
+      "correctAnswerIndex": 0,
+      "explanation": "Cart abandonment rate tracks the share of shoppers who add items but leave without purchasing."
+    },
+    {
+      "question": "In inventory terms, what does SKU stand for?",
+      "options": [
+        "Sales Key Unit",
+        "Stock Keeping Unit",
+        "Secure Key Upload",
+        "Shelf Kit Utility"
+      ],
+      "correctAnswerIndex": 1,
+      "explanation": "A Stock Keeping Unit uniquely identifies a sellable product variant for tracking and fulfillment."
+    },
+    {
+      "question": "Why do many shops use HTTPS on checkout pages?",
+      "options": [
+        "It makes images load as GIFs",
+        "It encrypts traffic so payment data is harder to intercept",
+        "It removes the need for product photos",
+        "It automatically refunds customers"
+      ],
+      "correctAnswerIndex": 1,
+      "explanation": "HTTPS (TLS) encrypts data in transit, which is essential when customers submit payment and personal details."
+    },
+    {
+      "question": "What does an order fulfillment workflow typically start with?",
+      "options": [
+        "Deleting the product catalog",
+        "Receiving a confirmed paid order",
+        "Printing random packing slips",
+        "Closing the warehouse"
+      ],
+      "correctAnswerIndex": 1,
+      "explanation": "Fulfillment usually begins once payment is confirmed, then pick, pack, and ship steps follow."
+    }
+  ]
+}
