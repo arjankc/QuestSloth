@@ -1,13 +1,22 @@
-import { useState } from 'react'
-import { audioMuted, playSfx, setAudioMuted } from '../lib/audio'
+import { useEffect, useState } from 'react'
+import {
+  audioMuted,
+  playSfx,
+  setAudioMuted,
+  subscribeAudioMuted,
+  unlockAudio,
+} from '../lib/audio'
 
 export function SoundToggle() {
   const [muted, setMuted] = useState(() => audioMuted())
 
+  useEffect(() => subscribeAudioMuted(() => setMuted(audioMuted())), [])
+
   function toggle() {
+    unlockAudio()
     const next = !muted
-    setMuted(next)
     setAudioMuted(next)
+    setMuted(next)
     if (!next) playSfx('ui')
   }
 

@@ -6,13 +6,20 @@
 
 export type SfxName =
   | 'hit'
+  | 'crit'
   | 'miss'
+  | 'block'
+  | 'power'
   | 'enrage'
   | 'victory'
   | 'defeat'
+  | 'escape'
   | 'levelup'
+  | 'achievement'
   | 'forge'
   | 'ui'
+
+export type MusicMode = 'off' | 'lobby' | 'battle' | 'enrage'
 
 type SfxOptions = {
   combo?: number
@@ -36,24 +43,29 @@ let sfxBus: GainNode | null = null
 let musicBus: GainNode | null = null
 let noiseCache: AudioBuffer | null = null
 let muted = readMuted()
+const muteListeners = new Set<() => void>()
 
-let musicWanted = false
+let musicMode: MusicMode = 'off'
 let schedulerId: number | null = null
 let musicStep = 0
 let nextNoteTime = 0
 
-const BPM = 92
-const STEP_SECONDS = 60 / BPM / 2
+const BPM_BATTLE = 92
+const BPM_ENRAGE = 118
+const BPM_LOBBY = 72
 
-/** Am – F – C – G, one bar each, eight eighth-notes per bar. */
-const LEAD_NOTES = [
+/** Am – F – C – G lead loop for battle. */
+const BATTLE_LEAD = [
   440, 523.25, 659.25, 880, 659.25, 523.25, 440, 523.25,
   349.23, 440, 523.25, 698.46, 523.25, 440, 349.23, 440,
   523.25, 659.25, 783.99, 1046.5, 783.99, 659.25, 523.25, 659.25,
   493.88, 587.33, 783.99, 987.77, 783.99, 587.33, 493.88, 587.33,
 ]
 
-const BASS_NOTES = [110, 87.31, 130.81, 98]
+const BATTLE_BASS = [110, 87.31, 130.81, 98]
+
+/** Soft pad arpeggio for lobby (Em). */
+const LOBBY_PAD = [164.81, 196, 246.94, 329.63, 246.94, 196, 164.81, 196]
 
 function readMuted() {
   if (typeof window === 'undefined') return false
@@ -72,12 +84,19 @@ function persistMuted() {
   try {
     window.localStorage.setItem(PREF_KEY, JSON.stringify({ muted }))
   } catch {
-    // Audio preference is a nicety; blocked storage should not break play.
+    // ignore
   }
 }
 
 export function audioMuted() {
   return muted
+}
+
+export function subscribeAudioMuted(listener: () => void) {
+  muteListeners.add(listener)
+  return () => {
+    muteListeners.delete(listener)
+  }
 }
 
 function ensureContext(): AudioContext | null {
@@ -97,11 +116,16 @@ function ensureContext(): AudioContext | null {
     sfxBus.connect(master)
 
     musicBus = ctx.createGain()
-    musicBus.gain.value = 0.26
+    musicBus.gain.value = 0.22
     musicBus.connect(master)
   }
   if (ctx.state === 'suspended') void ctx.resume()
   return ctx
+}
+
+/** Call from any click so Chrome unlocks AudioContext. */
+export function unlockAudio() {
+  ensureContext()
 }
 
 function getNoiseBuffer(context: AudioContext) {
@@ -195,9 +219,41 @@ export function playSfx(name: SfxName, options: SfxOptions = {}) {
       }
       break
     }
+    case 'crit':
+      sfxTone({ freq: 220, duration: 0.12, type: 'sawtooth', gain: 0.12, when })
+      sfxTone({ freq: 440, duration: 0.14, type: 'square', gain: 0.1, when: when + 0.05 })
+      sfxTone({ freq: 880, duration: 0.2, type: 'triangle', gain: 0.08, when: when + 0.12 })
+      sfxNoise({ duration: 0.12, gain: 0.1, when: when + 0.02, cutoff: 2400 })
+      break
+    case 'crit':
+      sfxTone({ freq: 880, duration: 0.2, type: 'sawtooth', gain: 0.1, when, slideTo: 220 })
+      sfxNoise({ duration: 0.16, gain: 0.16, when, cutoff: 3200 })
+      sfxTone({ freq: 1318.51, duration: 0.22, type: 'triangle', gain: 0.09, when: when + 0.03 })
+      sfxTone({ freq: 1760, duration: 0.18, type: 'triangle', gain: 0.06, when: when + 0.1 })
+      break
     case 'miss':
       sfxTone({ freq: 200, duration: 0.3, type: 'sawtooth', gain: 0.14, when, slideTo: 70 })
       sfxNoise({ duration: 0.18, gain: 0.12, when, cutoff: 520 })
+      break
+    case 'block':
+      sfxTone({ freq: 520, duration: 0.14, gain: 0.12, when })
+      sfxTone({ freq: 780, duration: 0.18, type: 'triangle', gain: 0.08, when: when + 0.02 })
+      sfxNoise({ duration: 0.08, gain: 0.08, when, cutoff: 2600 })
+      break
+    case 'power':
+      sfxTone({ freq: 392, duration: 0.14, type: 'triangle', gain: 0.08, when })
+      sfxTone({ freq: 587.33, duration: 0.18, type: 'triangle', gain: 0.08, when: when + 0.07 })
+      sfxTone({ freq: 880, duration: 0.26, type: 'triangle', gain: 0.07, when: when + 0.14 })
+      break
+    case 'block':
+      sfxTone({ freq: 640, duration: 0.08, type: 'triangle', gain: 0.1, when })
+      sfxTone({ freq: 960, duration: 0.14, type: 'sine', gain: 0.08, when: when + 0.04 })
+      sfxNoise({ duration: 0.06, gain: 0.06, when, cutoff: 3000 })
+      break
+    case 'power':
+      sfxTone({ freq: 500, duration: 0.08, type: 'sine', gain: 0.08, when })
+      sfxTone({ freq: 750, duration: 0.14, type: 'sine', gain: 0.07, when: when + 0.06 })
+      sfxTone({ freq: 1000, duration: 0.1, type: 'triangle', gain: 0.05, when: when + 0.12 })
       break
     case 'enrage':
       sfxTone({ freq: 110, duration: 0.5, type: 'sawtooth', gain: 0.12, when, slideTo: 55 })
@@ -208,6 +264,7 @@ export function playSfx(name: SfxName, options: SfxOptions = {}) {
         when: when + 0.05,
         slideTo: 41.2,
       })
+      sfxNoise({ duration: 0.25, gain: 0.08, when: when + 0.05, cutoff: 400 })
       break
     case 'victory': {
       const notes = [523.25, 659.25, 783.99, 1046.5]
@@ -236,6 +293,10 @@ export function playSfx(name: SfxName, options: SfxOptions = {}) {
       })
       break
     }
+    case 'escape':
+      sfxTone({ freq: 330, duration: 0.2, type: 'triangle', gain: 0.08, when, slideTo: 220 })
+      sfxTone({ freq: 247, duration: 0.28, type: 'sine', gain: 0.07, when: when + 0.15, slideTo: 165 })
+      break
     case 'levelup': {
       const notes = [659.25, 783.99, 987.77, 1318.51]
       notes.forEach((freq, index) => {
@@ -249,9 +310,29 @@ export function playSfx(name: SfxName, options: SfxOptions = {}) {
       })
       break
     }
+    case 'achievement': {
+      const notes = [783.99, 987.77, 1174.66, 1567.98]
+      notes.forEach((freq, index) => {
+        sfxTone({
+          freq,
+          duration: 0.18,
+          type: 'triangle',
+          gain: 0.08,
+          when: when + index * 0.09,
+        })
+      })
+      sfxNoise({ duration: 0.12, gain: 0.04, when: when + 0.3, cutoff: 4200 })
+      break
+    }
+    case 'achievement':
+      sfxTone({ freq: 587.33, duration: 0.1, type: 'triangle', gain: 0.09, when })
+      sfxTone({ freq: 783.99, duration: 0.12, type: 'triangle', gain: 0.09, when: when + 0.08 })
+      sfxTone({ freq: 1174.66, duration: 0.28, type: 'sine', gain: 0.08, when: when + 0.16 })
+      break
     case 'forge':
       sfxTone({ freq: 523.25, duration: 0.18, type: 'triangle', gain: 0.09, when })
       sfxTone({ freq: 783.99, duration: 0.3, type: 'triangle', gain: 0.08, when: when + 0.12 })
+      sfxNoise({ duration: 0.08, gain: 0.05, when: when + 0.05, cutoff: 2000 })
       break
     case 'ui':
       sfxTone({ freq: 520, duration: 0.05, type: 'triangle', gain: 0.06, when })
@@ -276,7 +357,7 @@ function musicTone(freq: number, at: number, duration: number, type: OscillatorT
   osc.stop(at + duration + 0.05)
 }
 
-function musicKick(at: number) {
+function musicKick(at: number, gain = 0.16) {
   if (!ctx || !musicBus) return
   const osc = ctx.createOscillator()
   const envelope = ctx.createGain()
@@ -285,7 +366,7 @@ function musicKick(at: number) {
   osc.frequency.setValueAtTime(92, at)
   osc.frequency.exponentialRampToValueAtTime(44, at + 0.12)
   envelope.gain.setValueAtTime(0.0001, at)
-  envelope.gain.exponentialRampToValueAtTime(0.16, at + 0.006)
+  envelope.gain.exponentialRampToValueAtTime(gain, at + 0.006)
   envelope.gain.exponentialRampToValueAtTime(0.0001, at + 0.17)
 
   osc.connect(envelope)
@@ -294,59 +375,123 @@ function musicKick(at: number) {
   osc.stop(at + 0.2)
 }
 
-function scheduleMusicStep(step: number, at: number) {
-  const stepInBar = step % 8
-  const bar = Math.floor(step / 8) % BASS_NOTES.length
+function stepSeconds() {
+  if (musicMode === 'lobby') return 60 / BPM_LOBBY / 2
+  if (musicMode === 'enrage') return 60 / BPM_ENRAGE / 2
+  return 60 / BPM_BATTLE / 2
+}
 
-  musicTone(LEAD_NOTES[step % LEAD_NOTES.length], at, 0.22, 'triangle', 0.075)
+function scheduleMusicStep(step: number, at: number) {
+  if (musicMode === 'lobby') {
+    const note = LOBBY_PAD[step % LOBBY_PAD.length]
+    musicTone(note, at, 0.55, 'sine', 0.045)
+    if (step % 8 === 0) musicTone(note / 2, at, 0.7, 'triangle', 0.03)
+    return
+  }
+
+  const leadGain = musicMode === 'enrage' ? 0.09 : 0.07
+  const bassGain = musicMode === 'enrage' ? 0.1 : 0.08
+  const kickGain = musicMode === 'enrage' ? 0.2 : 0.15
+
+  const stepInBar = step % 8
+  const bar = Math.floor(step / 8) % BATTLE_BASS.length
+
+  musicTone(BATTLE_LEAD[step % BATTLE_LEAD.length], at, 0.22, 'triangle', leadGain)
   if (stepInBar === 0 || stepInBar === 4) {
-    musicTone(BASS_NOTES[bar], at, 0.5, 'square', 0.085)
-    musicKick(at)
+    musicTone(BATTLE_BASS[bar], at, 0.5, 'square', bassGain)
+    musicKick(at, kickGain)
+  }
+  if (musicMode === 'enrage' && (stepInBar === 2 || stepInBar === 6)) {
+    musicKick(at, 0.08)
   }
 }
 
 function schedulerTick() {
-  if (!ctx) return
+  if (!ctx || musicMode === 'off') return
+  const stepLen = stepSeconds()
   while (nextNoteTime < ctx.currentTime + 0.12) {
     scheduleMusicStep(musicStep, nextNoteTime)
     musicStep += 1
-    nextNoteTime += STEP_SECONDS
+    nextNoteTime += stepLen
   }
 }
 
 function startScheduler() {
   const context = ensureContext()
-  if (!context || schedulerId !== null) return
+  if (!context || schedulerId !== null || muted || musicMode === 'off') return
   musicStep = 0
   nextNoteTime = context.currentTime + 0.08
+  if (musicBus) {
+    musicBus.gain.cancelScheduledValues(context.currentTime)
+    musicBus.gain.setValueAtTime(0.0001, context.currentTime)
+    musicBus.gain.exponentialRampToValueAtTime(
+      musicMode === 'lobby' ? 0.14 : 0.22,
+      context.currentTime + 0.4,
+    )
+  }
   schedulerTick()
   schedulerId = window.setInterval(schedulerTick, 40)
 }
 
-function stopScheduler() {
+function stopScheduler(fade = true) {
+  if (ctx && musicBus && fade) {
+    const now = ctx.currentTime
+    musicBus.gain.cancelScheduledValues(now)
+    musicBus.gain.setValueAtTime(Math.max(0.0001, musicBus.gain.value), now)
+    musicBus.gain.exponentialRampToValueAtTime(0.0001, now + 0.35)
+  }
   if (schedulerId !== null) {
     window.clearInterval(schedulerId)
     schedulerId = null
   }
 }
 
+function setMusicMode(mode: MusicMode) {
+  if (musicMode === mode) {
+    if (mode !== 'off' && !muted && schedulerId === null) startScheduler()
+    return
+  }
+  const prev = musicMode
+  musicMode = mode
+  if (mode === 'off') {
+    stopScheduler(true)
+    return
+  }
+  if (prev !== 'off') {
+    stopScheduler(false)
+  }
+  if (!muted) startScheduler()
+}
+
+export function startLobbyMusic() {
+  setMusicMode('lobby')
+}
+
 export function startBattleMusic() {
-  musicWanted = true
-  if (muted) return
-  startScheduler()
+  setMusicMode('battle')
+}
+
+export function setBattleMusicEnraged(enraged: boolean) {
+  if (musicMode === 'off' || musicMode === 'lobby') return
+  setMusicMode(enraged ? 'enrage' : 'battle')
 }
 
 export function stopBattleMusic() {
-  musicWanted = false
-  stopScheduler()
+  setMusicMode('off')
+}
+
+export function stopAllMusic() {
+  setMusicMode('off')
 }
 
 export function setAudioMuted(next: boolean) {
+  if (muted === next) return
   muted = next
   persistMuted()
+  muteListeners.forEach((listener) => listener())
 
   if (muted) {
-    stopScheduler()
+    stopScheduler(true)
     if (ctx && master) {
       master.gain.setTargetAtTime(0, ctx.currentTime, 0.02)
     }
@@ -357,5 +502,5 @@ export function setAudioMuted(next: boolean) {
   if (context && master) {
     master.gain.setTargetAtTime(0.9, context.currentTime, 0.02)
   }
-  if (musicWanted) startScheduler()
+  if (musicMode !== 'off') startScheduler()
 }

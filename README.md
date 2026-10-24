@@ -32,7 +32,7 @@ Quest schema: `questTitle`, `bossName`, five questions with `options[4]`, `corre
 - **Combos & score:** 100 pts + 25 per streak step; flawless clear +500.
 - **Level bonuses:** mild bonus damage / player HP from delver level.
 - **Achievements:** first win, flawless, combos, hard clear, escape, scholar — stored in `localStorage`.
-- **SFX + battle music:** procedural Web Audio (`src/lib/audio.ts`) with mute toggle — no audio files.
+- **SFX + music:** procedural Web Audio (`src/lib/audio.ts`) — soft lobby pad, battle loop that speeds up on enrage, hit/crit/block/power/forge/achievement cues. Header mute toggle; no audio files.
 - **Motion:** CSS battle FX (screen punch, slash, shield bubble, combo particles); respects `prefers-reduced-motion`.
 - Forge **Play in Dungeon** stores the pack in `sessionStorage` and a short local stash.
 

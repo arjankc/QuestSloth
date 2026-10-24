@@ -41,8 +41,13 @@ import {
   audioMuted,
   playSfx,
   setAudioMuted,
+  setBattleMusicEnraged,
   startBattleMusic,
+  startLobbyMusic,
+  stopAllMusic,
   stopBattleMusic,
+  subscribeAudioMuted,
+  unlockAudio,
 } from '../lib/audio'
 import sampleQuest from '../data/sample-quest.json'
 import type { QuestPack } from '../types/quest'
@@ -86,9 +91,18 @@ export function Dungeon() {
   const [pending, setPending] = useState<QuestPack | null>(() => peekPendingQuest())
   const [stash, setStash] = useState<StashEntry[]>(() => loadStash())
   const [shakeOptions, setShakeOptions] = useState(false)
+  const [enrageLatched, setEnrageLatched] = useState(false)
   const fxId = useRef(0)
 
-  useEffect(() => () => stopBattleMusic(), [])
+  // Soft pad in the lobby; battle BGM is started in startQuest (not here),
+  // so we must not stop music on every stage change.
+  useEffect(() => {
+    if (stage === 'lobby') startLobbyMusic()
+  }, [stage])
+
+  useEffect(() => () => stopAllMusic(), [])
+
+  useEffect(() => subscribeAudioMuted(() => setMute(audioMuted())), [])
 
   const question = useMemo(
     () => (quest ? quest.questions[index] : null),
@@ -103,8 +117,10 @@ export function Dungeon() {
   }, [level.level, powerId])
 
   function startQuest(pack: QuestPack) {
+    unlockAudio()
     pushStash(pack)
     setStash(loadStash())
+    setEnrageLatched(false)
     startBattleMusic()
 
     const diff = DIFFICULTIES[difficulty]
@@ -154,7 +170,7 @@ export function Dungeon() {
 
   function activatePower() {
     if (!power || !question || power.charges <= 0 || feedback) return
-    playSfx('ui')
+    playSfx('power')
 
     if (power.selected === 'hint') {
       const wrong = pickWrongOption(question.correctAnswerIndex)
@@ -230,7 +246,17 @@ export function Dungeon() {
       })
       setPendingEnd(nextBossHp <= 0 ? 'won' : null)
 
-      playSfx(nextBossHp <= 0 ? 'victory' : 'hit', { combo: comboAfter })
+      if (nextBossHp <= 0) {
+        playSfx('crit')
+      } else {
+        playSfx('hit', { combo: comboAfter })
+        const enrageThreshold = bossMaxHp * 0.4
+        if (!enrageLatched && nextBossHp <= enrageThreshold && nextBossHp > 0) {
+          setEnrageLatched(true)
+          setBattleMusicEnraged(true)
+          playSfx('enrage', { delaySeconds: 0.05 })
+        }
+      }
     } else {
       const blocked = power.shieldArmed
       const taken = blocked ? 0 : diff.damageToPlayer
@@ -260,7 +286,7 @@ export function Dungeon() {
         blocked,
       })
       setPendingEnd(nextPlayerHp <= 0 ? 'defeated' : null)
-      playSfx(blocked ? 'ui' : 'miss')
+      playSfx(blocked ? 'block' : 'miss')
     }
   }
 
@@ -284,11 +310,16 @@ export function Dungeon() {
     setStage('ended')
     if (outcome === 'won') {
       playSfx('victory')
-      if (result.levelAfter > result.levelBefore) playSfx('levelup', { delaySeconds: 0.4 })
+      if (result.levelAfter > result.levelBefore) {
+        playSfx('levelup', { delaySeconds: 0.45 })
+      }
+      if (result.newlyUnlocked.length > 0) {
+        playSfx('achievement', { delaySeconds: 0.7 })
+      }
     } else if (outcome === 'defeated') {
       playSfx('defeat')
     } else {
-      playSfx('miss')
+      playSfx('escape')
     }
   }
 
@@ -313,6 +344,7 @@ export function Dungeon() {
 
   function resetToLobby() {
     stopBattleMusic()
+    setEnrageLatched(false)
     setStage('lobby')
     setQuest(null)
     setFeedback(null)
@@ -327,9 +359,11 @@ export function Dungeon() {
   }
 
   function toggleMute() {
+    unlockAudio()
     const next = !mute
     setAudioMuted(next)
     setMute(next)
+    if (!next) playSfx('ui')
   }
 
   if (stage === 'lobby') {

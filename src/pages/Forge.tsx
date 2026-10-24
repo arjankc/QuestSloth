@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ModelProgress } from '../components/ModelProgress'
 import { QuestPreview } from '../components/QuestPreview'
 import { downloadQuestPack } from '../lib/download'
+import { playSfx, unlockAudio } from '../lib/audio'
 import { setPendingQuest } from '../lib/questStash'
 import {
   generateQuestPack,
@@ -70,6 +71,8 @@ export function Forge() {
       setQuest(pack)
       setPendingQuest(pack)
       setPhase('done')
+      unlockAudio()
+      playSfx('forge')
     } catch (err) {
       setPhase(isEngineReady() ? 'ready' : 'error')
       setError(err instanceof Error ? err.message : 'Generation failed')
@@ -82,6 +85,8 @@ export function Forge() {
     setPendingQuest(pack)
     setPhase('done')
     setError(null)
+    unlockAudio()
+    playSfx('ui')
   }
 
   return (
