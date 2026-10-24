@@ -1,15 +1,30 @@
-import { useMemo, useState } from 'react'
-import { HpBar } from '../components/HpBar'
+import { useMemo, useRef, useState } from 'react'
+import { BattleStage, type HitFx } from '../components/BattleStage'
+import { RunSummary } from '../components/RunSummary'
 import { readQuestFile } from '../lib/download'
 import { parseQuestPack } from '../lib/questSchema'
+import {
+  FLAWLESS_BONUS,
+  levelInfo,
+  loadProgress,
+  recordRun,
+  saveProgress,
+  scoreForHit,
+  type Progress,
+  type RunOutcome,
+  type RunResult,
+} from '../lib/progress'
 import sampleQuest from '../data/sample-quest.json'
 import type { QuestPack } from '../types/quest'
 import { DAMAGE_PER_HIT, STARTING_HP } from '../types/quest'
 
-type Stage = 'lobby' | 'battle' | 'won' | 'lost'
+type Stage = 'lobby' | 'battle' | 'ended'
+
 type Feedback = {
   correct: boolean
   explanation: string
+  points: number
+  comboAfter: number
 } | null
 
 export function Dungeon() {
@@ -20,14 +35,22 @@ export function Dungeon() {
   const [bossHp, setBossHp] = useState(STARTING_HP)
   const [feedback, setFeedback] = useState<Feedback>(null)
   const [selected, setSelected] = useState<number | null>(null)
-  const [shake, setShake] = useState<'player' | 'boss' | null>(null)
-  const [flash, setFlash] = useState<'player' | 'boss' | null>(null)
+  const [score, setScore] = useState(0)
+  const [combo, setCombo] = useState(0)
+  const [bestCombo, setBestCombo] = useState(0)
+  const [correctCount, setCorrectCount] = useState(0)
+  const [hit, setHit] = useState<HitFx | null>(null)
+  const [pendingEnd, setPendingEnd] = useState<RunOutcome | null>(null)
+  const [summary, setSummary] = useState<RunResult | null>(null)
+  const [profile, setProfile] = useState<Progress>(() => loadProgress())
   const [error, setError] = useState<string | null>(null)
+  const fxId = useRef(0)
 
   const question = useMemo(
     () => (quest ? quest.questions[index] : null),
     [quest, index],
   )
+  const level = levelInfo(profile.xp)
 
   function startQuest(pack: QuestPack) {
     setQuest(pack)
@@ -36,6 +59,13 @@ export function Dungeon() {
     setBossHp(STARTING_HP)
     setFeedback(null)
     setSelected(null)
+    setScore(0)
+    setCombo(0)
+    setBestCombo(0)
+    setCorrectCount(0)
+    setHit(null)
+    setPendingEnd(null)
+    setSummary(null)
     setError(null)
     setStage('battle')
   }
@@ -56,50 +86,88 @@ export function Dungeon() {
     if (!quest || !question || feedback) return
     setSelected(optionIndex)
     const correct = optionIndex === question.correctAnswerIndex
+    fxId.current += 1
 
     if (correct) {
-      const nextBoss = Math.max(0, bossHp - DAMAGE_PER_HIT)
-      setBossHp(nextBoss)
-      setShake('boss')
-      setFlash('boss')
-      setFeedback({ correct: true, explanation: question.explanation })
-      window.setTimeout(() => setShake(null), 400)
-      window.setTimeout(() => setFlash(null), 450)
-      if (nextBoss <= 0) {
-        window.setTimeout(() => setStage('won'), 700)
-      }
+      const comboAfter = combo + 1
+      const points = scoreForHit(comboAfter)
+      const nextBossHp = Math.max(0, bossHp - DAMAGE_PER_HIT)
+
+      setCombo(comboAfter)
+      setBestCombo(Math.max(bestCombo, comboAfter))
+      setScore(score + points)
+      setCorrectCount(correctCount + 1)
+      setBossHp(nextBossHp)
+      setHit({
+        id: fxId.current,
+        side: 'boss',
+        amount: DAMAGE_PER_HIT,
+        combo: comboAfter,
+        scoreGained: points,
+        killing: nextBossHp <= 0,
+      })
+      setFeedback({
+        correct: true,
+        explanation: question.explanation,
+        points,
+        comboAfter,
+      })
+      setPendingEnd(nextBossHp <= 0 ? 'won' : null)
     } else {
-      const nextPlayer = Math.max(0, playerHp - DAMAGE_PER_HIT)
-      setPlayerHp(nextPlayer)
-      setShake('player')
-      setFlash('player')
-      setFeedback({ correct: false, explanation: question.explanation })
-      window.setTimeout(() => setShake(null), 400)
-      window.setTimeout(() => setFlash(null), 450)
-      if (nextPlayer <= 0) {
-        window.setTimeout(() => setStage('lost'), 700)
-      }
+      const nextPlayerHp = Math.max(0, playerHp - DAMAGE_PER_HIT)
+
+      setCombo(0)
+      setPlayerHp(nextPlayerHp)
+      setHit({
+        id: fxId.current,
+        side: 'player',
+        amount: DAMAGE_PER_HIT,
+        combo: 0,
+        scoreGained: 0,
+        killing: nextPlayerHp <= 0,
+      })
+      setFeedback({
+        correct: false,
+        explanation: question.explanation,
+        points: 0,
+        comboAfter: 0,
+      })
+      setPendingEnd(nextPlayerHp <= 0 ? 'defeated' : null)
     }
+  }
+
+  function finishRun(outcome: RunOutcome) {
+    if (!quest) return
+    const flawless = outcome === 'won'
+    const finalScore = score + (flawless ? FLAWLESS_BONUS : 0)
+    const result = recordRun(profile, {
+      outcome,
+      score: finalScore,
+      correct: correctCount,
+      total: quest.questions.length,
+      bestStreak: bestCombo,
+      flawless,
+    })
+    saveProgress(result.progress)
+    setProfile(result.progress)
+    setSummary(result)
+    setStage('ended')
   }
 
   function handleNext() {
     if (!quest || !feedback) return
-    if (stage === 'won' || stage === 'lost') return
-    if (bossHp <= 0) {
-      setStage('won')
-      return
-    }
-    if (playerHp <= 0) {
-      setStage('lost')
+    if (pendingEnd) {
+      finishRun(pendingEnd)
       return
     }
     if (index >= quest.questions.length - 1) {
-      setStage(bossHp < playerHp ? 'won' : playerHp <= 0 ? 'lost' : 'won')
+      finishRun('escaped')
       return
     }
-    setIndex((i) => i + 1)
+    setIndex(index + 1)
     setFeedback(null)
     setSelected(null)
+    setHit(null)
   }
 
   function resetToLobby() {
@@ -107,22 +175,51 @@ export function Dungeon() {
     setQuest(null)
     setFeedback(null)
     setSelected(null)
+    setHit(null)
+    setPendingEnd(null)
+    setSummary(null)
     setError(null)
   }
 
   if (stage === 'lobby') {
     return (
-      <div className="mx-auto max-w-lg space-y-8">
+      <div className="mx-auto max-w-lg space-y-6">
         <header className="space-y-3 text-center">
           <p className="font-display text-[9px] text-[var(--color-ember)]">
             Student Dungeon
           </p>
           <h1 className="text-2xl font-bold sm:text-3xl">Upload a quest. Defeat the boss.</h1>
           <p className="text-sm leading-relaxed text-[color-mix(in_srgb,var(--color-parchment)_70%,transparent)]">
-            No AI runs here — just your wits and a quest.json from the Forge. Works on
-            low-end phones.
+            No AI runs here — just your wits and a quest.json from the Forge. Chain correct
+            answers into combos for score, earn XP, and keep the boss from escaping.
           </p>
         </header>
+
+        <div className="panel space-y-3 p-4">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="font-display text-[8px] text-[var(--color-ember)]">
+              Delver record
+            </span>
+            <span className="font-display text-[8px] text-[var(--color-moss-bright)]">
+              Level {level.level}
+            </span>
+          </div>
+          <div className="h-2.5 overflow-hidden border-2 border-[var(--color-panel-edge)] bg-[#0d0b09]">
+            <div
+              className="h-full bg-[var(--color-moss-bright)] transition-all duration-500"
+              style={{ width: `${level.pct}%` }}
+            />
+          </div>
+          <div className="flex items-baseline justify-between text-[11px] text-[color-mix(in_srgb,var(--color-parchment)_55%,transparent)]">
+            <span>
+              {level.into} / {level.span} XP
+            </span>
+            <span className="tabular-nums">
+              Best {profile.bestScore.toLocaleString()} · Streak {profile.bestStreak}× · Runs{' '}
+              {profile.runs}
+            </span>
+          </div>
+        </div>
 
         <div className="panel space-y-5 p-6">
           <label className="block space-y-2">
@@ -145,54 +242,37 @@ export function Dungeon() {
           >
             Play sample quest
           </button>
-          {error && (
-            <p className="text-sm text-[#f0c0c0]">{error}</p>
-          )}
+          {error && <p className="text-sm text-[#f0c0c0]">{error}</p>}
         </div>
       </div>
     )
   }
 
-  if (stage === 'won' || stage === 'lost') {
+  if (stage === 'ended' && summary) {
     return (
-      <div className="mx-auto max-w-md space-y-6 text-center">
-        <div className={`panel space-y-4 p-8 ${shake ? 'shake-hit' : ''}`}>
-          <p className="font-display text-[10px] text-[var(--color-ember)]">
-            {stage === 'won' ? 'Victory' : 'Defeat'}
-          </p>
-          <h1 className="text-2xl font-bold">
-            {stage === 'won'
-              ? `${quest?.bossName ?? 'The boss'} falls!`
-              : 'You were defeated…'}
-          </h1>
-          <p className="text-sm text-[color-mix(in_srgb,var(--color-parchment)_70%,transparent)]">
-            {stage === 'won'
-              ? 'Your answers cut true. Rest, then forge another pack.'
-              : 'Study the explanations and try the dungeon again.'}
-          </p>
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-            {quest && (
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => startQuest(quest)}
-              >
-                Rematch
-              </button>
-            )}
-            <button type="button" className="btn-secondary" onClick={resetToLobby}>
-              Back to lobby
-            </button>
-          </div>
-        </div>
-      </div>
+      <RunSummary
+        result={summary}
+        bossName={quest?.bossName ?? 'The boss'}
+        onRematch={() => quest && startQuest(quest)}
+        onLobby={resetToLobby}
+      />
     )
   }
 
   if (!quest || !question) return null
 
+  const isLastQuestion = index >= quest.questions.length - 1
+  const ctaLabel =
+    pendingEnd === 'won'
+      ? 'Claim victory'
+      : pendingEnd === 'defeated'
+        ? 'Accept defeat'
+        : isLastQuestion
+          ? 'See results'
+          : 'Next question'
+
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-4">
       <header className="space-y-1 text-center">
         <p className="font-display text-[9px] text-[var(--color-ember)]">
           {quest.questTitle}
@@ -203,24 +283,15 @@ export function Dungeon() {
         </p>
       </header>
 
-      <div
-        className={`panel space-y-4 p-5 ${shake === 'player' || shake === 'boss' ? 'shake-hit' : ''}`}
-      >
-        <HpBar
-          label="You"
-          hp={playerHp}
-          maxHp={STARTING_HP}
-          variant="player"
-          flash={flash === 'player'}
-        />
-        <HpBar
-          label={quest.bossName}
-          hp={bossHp}
-          maxHp={STARTING_HP}
-          variant="boss"
-          flash={flash === 'boss'}
-        />
-      </div>
+      <BattleStage
+        bossName={quest.bossName}
+        playerHp={playerHp}
+        bossHp={bossHp}
+        maxHp={STARTING_HP}
+        score={score}
+        combo={combo}
+        hit={hit}
+      />
 
       <div className="panel space-y-5 p-5 sm:p-6">
         <h2 className="text-lg font-semibold leading-snug">{question.question}</h2>
@@ -231,9 +302,11 @@ export function Dungeon() {
             const isCorrect = oi === question.correctAnswerIndex
             let extra = 'border-[var(--color-panel-edge)] hover:border-[var(--color-moss)]'
             if (showResult && isCorrect) {
-              extra = 'border-[var(--color-moss-bright)] bg-[color-mix(in_srgb,var(--color-moss)_25%,transparent)]'
+              extra =
+                'border-[var(--color-moss-bright)] bg-[color-mix(in_srgb,var(--color-moss)_25%,transparent)]'
             } else if (showResult && isSelected && !isCorrect) {
-              extra = 'border-[var(--color-blood)] bg-[color-mix(in_srgb,var(--color-blood)_25%,transparent)]'
+              extra =
+                'border-[var(--color-blood)] bg-[color-mix(in_srgb,var(--color-blood)_25%,transparent)]'
             }
 
             return (
@@ -259,19 +332,24 @@ export function Dungeon() {
               feedback.correct ? 'text-[var(--color-moss-bright)]' : 'text-[#f0c0c0]'
             }`}
           >
-            <p className="font-semibold">
-              {feedback.correct
-                ? `Hit! −${DAMAGE_PER_HIT} boss HP`
-                : `Miss! −${DAMAGE_PER_HIT} your HP`}
-            </p>
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <p className="font-semibold">
+                {feedback.correct
+                  ? `Hit! −${DAMAGE_PER_HIT} boss HP`
+                  : `Miss! −${DAMAGE_PER_HIT} your HP`}
+              </p>
+              {feedback.correct && feedback.comboAfter >= 2 && (
+                <p className="font-display text-[8px] text-[var(--color-ember-bright)]">
+                  {feedback.comboAfter}× combo · +{feedback.points} pts
+                </p>
+              )}
+            </div>
             <p className="text-sm leading-relaxed text-[var(--color-parchment)]">
               {feedback.explanation}
             </p>
-            {stage === 'battle' && bossHp > 0 && playerHp > 0 && (
-              <button type="button" className="btn-primary" onClick={handleNext}>
-                {index >= quest.questions.length - 1 ? 'Finish' : 'Next question'}
-              </button>
-            )}
+            <button type="button" className="btn-primary" onClick={handleNext}>
+              {ctaLabel}
+            </button>
           </div>
         )}
       </div>

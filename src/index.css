@@ -149,3 +149,256 @@
 .hp-flash {
   animation: hp-flash 0.4s ease-in-out;
 }
+
+/* ---- Dungeon battle stage ---- */
+
+.stage-starfield {
+  background-image:
+    radial-gradient(circle, color-mix(in srgb, var(--color-parchment) 60%, transparent) 1px, transparent 1.6px),
+    radial-gradient(circle, color-mix(in srgb, var(--color-parchment) 32%, transparent) 1px, transparent 1.6px);
+  background-position:
+    8px 12px,
+    26px 31px;
+  background-size:
+    43px 37px,
+    67px 61px;
+  opacity: 0.45;
+}
+
+.stage-ground {
+  background: linear-gradient(180deg, #2c3b30 0%, #1a231c 58%, #10150f 100%);
+  border-top: 3px solid #0b0907;
+  box-shadow: inset 0 3px 0 color-mix(in srgb, var(--color-moss-bright) 28%, transparent);
+}
+
+.stage-vignette {
+  background: radial-gradient(
+    ellipse at center,
+    transparent 30%,
+    color-mix(in srgb, var(--color-blood) 55%, transparent) 100%
+  );
+  animation: stage-vignette 0.5s ease-out forwards;
+}
+
+.sprite-idle {
+  animation: sprite-bob 2.6s steps(2, end) infinite;
+}
+
+.sprite-idle-slow {
+  animation: sprite-bob-slow 3.4s steps(2, end) infinite;
+  animation-delay: 0.7s;
+}
+
+.sprite-recoil {
+  animation: sprite-recoil 0.42s steps(4, end);
+}
+
+.sprite-strike {
+  animation: sprite-strike 0.46s steps(4, end);
+}
+
+.boss-fall {
+  animation: boss-fall 1.1s ease-in forwards;
+}
+
+.hero-fall {
+  animation: hero-fall 1.1s ease-in forwards;
+}
+
+.damage-number {
+  animation: damage-rise 1.05s ease-out forwards;
+}
+
+.impact-ring {
+  animation: impact-ring 0.5s ease-out forwards;
+}
+
+.combo-badge {
+  animation: combo-pop 0.32s steps(3, end);
+}
+
+.score-pop {
+  animation: score-pop 0.35s ease-out;
+}
+
+.enrage-aura {
+  animation: enrage-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes sprite-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes sprite-bob-slow {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes sprite-recoil {
+  0% {
+    translate: 0 0;
+    filter: none;
+  }
+  20% {
+    translate: 7px -2px;
+    filter: brightness(2.4) saturate(0.3);
+  }
+  55% {
+    translate: -2px 0;
+    filter: brightness(1.15);
+  }
+  100% {
+    translate: 0 0;
+    filter: none;
+  }
+}
+
+@keyframes sprite-strike {
+  0% {
+    translate: 0 0;
+  }
+  25% {
+    translate: 18px -3px;
+  }
+  45% {
+    translate: 5px 0;
+  }
+  100% {
+    translate: 0 0;
+  }
+}
+
+@keyframes boss-fall {
+  0% {
+    translate: 0 0;
+    opacity: 1;
+  }
+  22% {
+    translate: 0 -6px;
+    opacity: 1;
+  }
+  100% {
+    translate: 0 28px;
+    opacity: 0;
+  }
+}
+
+@keyframes hero-fall {
+  0% {
+    translate: 0 0;
+    opacity: 1;
+  }
+  100% {
+    translate: -6px 18px;
+    opacity: 0.15;
+  }
+}
+
+@keyframes damage-rise {
+  0% {
+    opacity: 0;
+    translate: 0 8px;
+    scale: 0.6;
+  }
+  16% {
+    opacity: 1;
+    scale: 1.12;
+  }
+  100% {
+    opacity: 0;
+    translate: 0 -44px;
+    scale: 1;
+  }
+}
+
+@keyframes impact-ring {
+  0% {
+    opacity: 0.85;
+    scale: 0.3;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.5;
+  }
+}
+
+@keyframes combo-pop {
+  0% {
+    opacity: 0;
+    scale: 0.55;
+  }
+  45% {
+    opacity: 1;
+    scale: 1.12;
+  }
+  100% {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes score-pop {
+  0% {
+    scale: 1;
+  }
+  35% {
+    scale: 1.22;
+    color: var(--color-ember-bright);
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+@keyframes enrage-pulse {
+  0%,
+  100% {
+    opacity: 0.3;
+    scale: 1;
+  }
+  50% {
+    opacity: 0.6;
+    scale: 1.14;
+  }
+}
+
+@keyframes stage-vignette {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sprite-idle,
+  .sprite-idle-slow,
+  .sprite-recoil,
+  .sprite-strike,
+  .damage-number,
+  .impact-ring,
+  .combo-badge,
+  .score-pop,
+  .enrage-aura,
+  .stage-vignette {
+    animation: none !important;
+  }
+
+  .boss-fall,
+  .hero-fall {
+    animation: none !important;
+    opacity: 0.25;
+  }
+}

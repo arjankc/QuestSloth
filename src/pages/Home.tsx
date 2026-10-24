@@ -50,8 +50,9 @@ export function Home() {
               02 Dungeon
             </h2>
             <p className="mt-3 text-sm leading-relaxed">
-              Upload a quest.json (or play the sample). Correct hits damage the boss;
-              misses hurt you and show the explanation. Zero inference — phone-friendly.
+              Upload a quest.json (or play the sample). Chain correct hits into combos,
+              bank XP, and finish a flawless run to drop the boss. Zero inference —
+              phone-friendly.
             </p>
           </article>
         </div>

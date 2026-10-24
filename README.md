@@ -25,6 +25,13 @@ Built for [Hacktoberfest Open-Source AI Challenge: Week 3 — Slow and Steady](h
 
 Quest schema: `questTitle`, `bossName`, five questions with `options[4]`, `correctAnswerIndex`, `explanation`.
 
+## Scoring & progression
+
+- Correct answer: **100 points**, plus **25** for each consecutive hit (combo).
+- A flawless clear adds **500** and is the only way to drop the boss to 0 HP; one miss leaves it alive and the boss escapes.
+- XP is 1 per 10 points, +50 for a win, and **500 XP per level**.
+- Level, best score, best streak and run count persist in `localStorage`.
+
 ## Local setup
 
 ```bash
