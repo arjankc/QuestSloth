@@ -14,7 +14,7 @@ export function Home() {
 
       <div className="relative space-y-10">
         <div className="max-w-2xl space-y-6">
-          <p className="font-display text-[11px] leading-relaxed text-[var(--color-ember)] sm:text-sm">
+          <p className="brand-glow font-display text-[11px] leading-relaxed text-[var(--color-ember)] sm:text-sm">
             QuestSloth
           </p>
           <h1 className="text-3xl font-bold leading-tight tracking-tight text-[var(--color-parchment)] sm:text-4xl">
@@ -50,9 +50,8 @@ export function Home() {
               02 Dungeon
             </h2>
             <p className="mt-3 text-sm leading-relaxed">
-              Upload a quest.json (or play the sample). Chain correct hits into combos,
-              bank XP, and finish a flawless run to drop the boss. Zero inference —
-              phone-friendly.
+              Upload a quest.json (or play a forged pack). Pick difficulty and a power,
+              chain combos, earn XP and achievements. Zero inference — phone-friendly.
             </p>
           </article>
         </div>

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ModelProgress } from '../components/ModelProgress'
 import { QuestPreview } from '../components/QuestPreview'
 import { downloadQuestPack } from '../lib/download'
+import { setPendingQuest } from '../lib/questStash'
 import {
   generateQuestPack,
   hasWebGPU,
@@ -25,12 +26,18 @@ HTTPS encrypts checkout traffic so payment details are harder to intercept.
 Order fulfillment typically starts after a paid order is confirmed, then pick, pack, and ship.`
 
 export function Forge() {
+  const navigate = useNavigate()
   const [notes, setNotes] = useState(SAMPLE_NOTES)
   const [phase, setPhase] = useState<Phase>('idle')
   const [progress, setProgress] = useState<LoadProgress>({ progress: 0, text: '' })
   const [quest, setQuest] = useState<QuestPack | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [webgpu, setWebgpu] = useState<boolean | null>(null)
+
+  function playInDungeon(pack: QuestPack) {
+    setPendingQuest(pack)
+    navigate('/dungeon')
+  }
 
   useEffect(() => {
     void hasWebGPU().then((ok) => {
@@ -61,6 +68,7 @@ export function Forge() {
         setProgress(report)
       })
       setQuest(pack)
+      setPendingQuest(pack)
       setPhase('done')
     } catch (err) {
       setPhase(isEngineReady() ? 'ready' : 'error')
@@ -71,6 +79,7 @@ export function Forge() {
   function handleUseSample() {
     const pack = sampleQuest as QuestPack
     setQuest(pack)
+    setPendingQuest(pack)
     setPhase('done')
     setError(null)
   }
@@ -183,12 +192,16 @@ export function Forge() {
           {quest ? (
             <div className="space-y-4">
               <QuestPreview quest={quest} />
-              <Link to="/dungeon" className="btn-primary w-full sm:w-auto">
+              <button
+                type="button"
+                className="btn-primary w-full sm:w-auto"
+                onClick={() => playInDungeon(quest)}
+              >
                 Play in Dungeon →
-              </Link>
+              </button>
               <p className="text-xs text-[color-mix(in_srgb,var(--color-parchment)_55%,transparent)]">
-                Download the JSON and upload it in the Dungeon, or share the file with
-                students.
+                Hands the pack straight to the Dungeon (and keeps a local stash). Or
+                download JSON to share with students.
               </p>
             </div>
           ) : (

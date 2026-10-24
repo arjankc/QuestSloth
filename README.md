@@ -2,7 +2,7 @@
 
 **Turn lecture notes into a dungeon-crawler quiz — entirely in the browser.**
 
-Built for [Hacktoberfest Open-Source AI Challenge: Week 3 — Slow and Steady](https://dev.to/challenges/hacktoberfest-week3-2026-10-19). Teachers paste notes; local **Gemma 2 2B** (via [WebLLM](https://webllm.mlc.ai/)) forges a `quest.json`. Students upload that pack and fight the boss by answering — no inference on the play path, so phones stay happy.
+Built for [Hacktoberfest Open-Source AI Challenge: Week 3 — Slow and Steady](https://dev.to/challenges/hacktoberfest-week3-2026-10-19). Teachers paste notes; local **Gemma 2 2B** (via [WebLLM](https://webllm.mlc.ai/)) forges a `quest.json`. Students fight the boss by answering — no inference on the play path.
 
 ## Why open weights?
 
@@ -14,23 +14,27 @@ Built for [Hacktoberfest Open-Source AI Challenge: Week 3 — Slow and Steady](h
 
 - Vite + React + TypeScript + Tailwind CSS
 - `@mlc-ai/web-llm` · model `gemma-2-2b-it-q4f16_1-MLC-1k` (Gemma 2 2B IT, ~1.5GB, fits ~4GB VRAM)
-- Static host: GitHub Pages (HashRouter)
+- Static host: GitHub Pages (`base: '/QuestSloth/'`, HashRouter)
 
 ## Modes
 
 | Mode | Route | AI? |
 | --- | --- | --- |
 | **Teacher Forge** | `#/forge` | Yes — loads Gemma, emits strict quest JSON |
-| **Student Dungeon** | `#/dungeon` | No — upload JSON or play the sample pack |
+| **Student Dungeon** | `#/dungeon` | No — upload JSON, forged handoff, sample, or stash |
 
 Quest schema: `questTitle`, `bossName`, five questions with `options[4]`, `correctAnswerIndex`, `explanation`.
 
-## Scoring & progression
+## Game mechanics
 
-- Correct answer: **100 points**, plus **25** for each consecutive hit (combo).
-- A flawless clear adds **500** and is the only way to drop the boss to 0 HP; one miss leaves it alive and the boss escapes.
-- XP is 1 per 10 points, +50 for a win, and **500 XP per level**.
-- Level, best score, best streak and run count persist in `localStorage`.
+- **Difficulty:** Easy / Normal / Hard (HP and damage tables).
+- **Powers (pick one):** Hint, Shield, Focus Strike (Shield & Focus unlock at level 2).
+- **Combos & score:** 100 pts + 25 per streak step; flawless clear +500.
+- **Level bonuses:** mild bonus damage / player HP from delver level.
+- **Achievements:** first win, flawless, combos, hard clear, escape, scholar — stored in `localStorage`.
+- **SFX + battle music:** procedural Web Audio (`src/lib/audio.ts`) with mute toggle — no audio files.
+- **Motion:** CSS battle FX (screen punch, slash, shield bubble, combo particles); respects `prefers-reduced-motion`.
+- Forge **Play in Dungeon** stores the pack in `sessionStorage` and a short local stash.
 
 ## Local setup
 
@@ -49,6 +53,8 @@ npm run preview
 ## Deploy
 
 Push to `main`. GitHub Actions (`.github/workflows/deploy.yml`) builds and deploys `dist/` to GitHub Pages. Enable **Settings → Pages → Source: GitHub Actions**.
+
+Live: https://arjankc.github.io/QuestSloth/
 
 ## License
 

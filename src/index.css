@@ -382,17 +382,273 @@
   }
 }
 
+.stage-punch {
+  animation: stage-punch 0.28s ease-out;
+}
+
+.stage-shake-hard {
+  animation: stage-shake-hard 0.35s ease-in-out;
+}
+
+.stage-flash {
+  animation: stage-flash 0.45s ease-out;
+}
+
+.sprite-knockback {
+  animation: sprite-knockback 0.48s steps(4, end);
+}
+
+.sprite-strike-heavy {
+  animation: sprite-strike-heavy 0.62s steps(5, end);
+}
+
+.sprite-focus-windup {
+  animation: sprite-focus-windup 0.45s ease-in-out;
+}
+
+.boss-hit-stun {
+  filter: grayscale(0.55) brightness(1.35);
+}
+
+.slash-arc::before {
+  content: '';
+  position: absolute;
+  left: 40%;
+  top: 20%;
+  width: 70%;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, #ffd75e, #c45c26);
+  transform-origin: left center;
+  animation: slash-arc 0.4s ease-out forwards;
+  pointer-events: none;
+}
+
+.shield-bubble {
+  animation: shield-bubble 0.7s ease-out;
+}
+
+.combo-surge {
+  animation: combo-surge 0.5s ease-out;
+}
+
+.crit-bloom {
+  text-shadow: 0 0 12px #ffd75e;
+  animation: crit-bloom 0.7s ease-out;
+}
+
+.enrage-breathe {
+  animation: enrage-pulse 1.2s ease-in-out infinite, enrage-breathe 2.4s ease-in-out infinite;
+}
+
+.ember-dot {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: var(--color-ember-bright);
+  animation: ember-fly 0.7s ease-out forwards;
+}
+
+.ember-dot-1 { --dx: -28px; --dy: -36px; animation-delay: 0ms; }
+.ember-dot-2 { --dx: 22px; --dy: -40px; animation-delay: 30ms; }
+.ember-dot-3 { --dx: -12px; --dy: -52px; animation-delay: 50ms; }
+.ember-dot-4 { --dx: 30px; --dy: -22px; animation-delay: 70ms; }
+.ember-dot-5 { --dx: -34px; --dy: -18px; animation-delay: 40ms; }
+.ember-dot-6 { --dx: 8px; --dy: -48px; animation-delay: 90ms; }
+.ember-dot-7 { --dx: -4px; --dy: -30px; animation-delay: 20ms; }
+
+.hint-fade {
+  animation: hint-fade 0.45s ease-out forwards;
+}
+
+.options-shake {
+  animation: options-shake 0.35s ease-in-out;
+}
+
+.battle-enter {
+  animation: battle-enter 0.4s ease-out;
+}
+
+.summary-slam {
+  animation: summary-slam 0.45s cubic-bezier(0.2, 1.4, 0.3, 1);
+}
+
+.stat-enter {
+  animation: stat-enter 0.4s ease-out both;
+}
+
+.stat-enter:nth-child(2) {
+  animation-delay: 0.06s;
+}
+
+.stat-enter:nth-child(3) {
+  animation-delay: 0.12s;
+}
+
+.achievement-toast {
+  animation: achievement-toast 0.55s cubic-bezier(0.2, 1.2, 0.3, 1);
+}
+
+.achievement-check {
+  animation: achievement-check 0.4s ease-out;
+}
+
+.power-armed {
+  box-shadow: 0 0 0 2px color-mix(in srgb, cyan 50%, transparent);
+}
+
+.brand-glow {
+  animation: brand-glow 3.2s ease-in-out infinite;
+}
+
+@keyframes stage-punch {
+  0% { transform: translate(0, 0) scale(1); }
+  30% { transform: translate(-3px, 2px) scale(1.015); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+@keyframes stage-shake-hard {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+
+@keyframes stage-flash {
+  0% { filter: brightness(2.2); }
+  100% { filter: brightness(1); }
+}
+
+@keyframes sprite-knockback {
+  0% { translate: 0 0; }
+  25% { translate: -16px 4px; }
+  100% { translate: 0 0; }
+}
+
+@keyframes sprite-strike-heavy {
+  0% { translate: 0 0; scale: 1; }
+  20% { translate: -8px 0; scale: 1.05; }
+  45% { translate: 28px -6px; scale: 1.08; }
+  100% { translate: 0 0; scale: 1; }
+}
+
+@keyframes sprite-focus-windup {
+  0%, 100% { translate: 0 0; filter: brightness(1); }
+  40% { translate: -10px 0; filter: brightness(1.4) saturate(1.2); }
+  70% { translate: -6px -2px; }
+}
+
+@keyframes slash-arc {
+  0% { opacity: 0; transform: rotate(-25deg) scaleX(0.2); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(18deg) scaleX(1.2) translateX(24px); }
+}
+
+@keyframes shield-bubble {
+  0% { opacity: 0; transform: scale(0.6); }
+  40% { opacity: 0.9; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(1.25); }
+}
+
+@keyframes combo-surge {
+  0% { transform: scale(0.7); }
+  50% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+@keyframes crit-bloom {
+  0% { transform: scale(0.7); opacity: 0; }
+  30% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+@keyframes enrage-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+@keyframes ember-fly {
+  0% { opacity: 1; transform: translate(0, 0) scale(1); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0.3); }
+}
+
+@keyframes hint-fade {
+  from { opacity: 1; }
+  to { opacity: 0.35; }
+}
+
+@keyframes options-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+@keyframes battle-enter {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes summary-slam {
+  from { opacity: 0; transform: scale(0.88) translateY(16px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes stat-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes achievement-toast {
+  from { opacity: 0; transform: translateX(24px) rotate(-4deg); }
+  to { opacity: 1; transform: translateX(0) rotate(0); }
+}
+
+@keyframes achievement-check {
+  0% { transform: scale(0.85); }
+  60% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+@keyframes brand-glow {
+  0%, 100% { text-shadow: 0 0 0 transparent; }
+  50% { text-shadow: 0 0 18px color-mix(in srgb, var(--color-ember) 55%, transparent); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sprite-idle,
   .sprite-idle-slow,
   .sprite-recoil,
   .sprite-strike,
+  .sprite-strike-heavy,
+  .sprite-knockback,
+  .sprite-focus-windup,
   .damage-number,
   .impact-ring,
   .combo-badge,
+  .combo-surge,
   .score-pop,
   .enrage-aura,
-  .stage-vignette {
+  .enrage-breathe,
+  .stage-vignette,
+  .stage-punch,
+  .stage-shake-hard,
+  .stage-flash,
+  .slash-arc::before,
+  .shield-bubble,
+  .ember-dot,
+  .hint-fade,
+  .options-shake,
+  .battle-enter,
+  .summary-slam,
+  .stat-enter,
+  .achievement-toast,
+  .achievement-check,
+  .crit-bloom,
+  .brand-glow {
     animation: none !important;
   }
 

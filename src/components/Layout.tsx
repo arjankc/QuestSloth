@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet } from 'react-router-dom'
+import { SoundToggle } from './SoundToggle'
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   [
@@ -28,6 +29,7 @@ export function Layout() {
             <NavLink to="/dungeon" className={linkClass}>
               Dungeon
             </NavLink>
+            <SoundToggle />
           </nav>
         </div>
       </header>
