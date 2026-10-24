@@ -102,7 +102,6 @@ export function Dungeon() {
         id: fxId.current,
         side: 'boss',
         amount: DAMAGE_PER_HIT,
-        combo: comboAfter,
         scoreGained: points,
         killing: nextBossHp <= 0,
       })
@@ -122,7 +121,6 @@ export function Dungeon() {
         id: fxId.current,
         side: 'player',
         amount: DAMAGE_PER_HIT,
-        combo: 0,
         scoreGained: 0,
         killing: nextPlayerHp <= 0,
       })

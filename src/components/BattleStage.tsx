@@ -12,7 +12,6 @@ export type HitFx = {
   id: number
   side: 'player' | 'boss'
   amount: number
-  combo: number
   scoreGained: number
   killing: boolean
 }
