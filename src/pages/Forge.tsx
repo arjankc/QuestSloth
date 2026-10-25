@@ -7,10 +7,10 @@ import { playSfx, unlockAudio } from '../lib/audio'
 import { setPendingQuest } from '../lib/questStash'
 import {
   generateQuestPack,
+  getModelLabel,
   hasWebGPU,
   isEngineReady,
   loadEngine,
-  MODEL_LABEL,
   type LoadProgress,
 } from '../lib/webllm'
 import type { QuestPack } from '../types/quest'
@@ -34,6 +34,7 @@ export function Forge() {
   const [quest, setQuest] = useState<QuestPack | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [webgpu, setWebgpu] = useState<boolean | null>(null)
+  const [modelLabel, setModelLabel] = useState(getModelLabel())
 
   function playInDungeon(pack: QuestPack) {
     setPendingQuest(pack)
@@ -52,10 +53,16 @@ export function Forge() {
     setPhase('loading')
     try {
       await loadEngine((report) => setProgress(report))
+      setModelLabel(getModelLabel())
       setPhase('ready')
     } catch (err) {
       setPhase('error')
-      setError(err instanceof Error ? err.message : 'Failed to load model')
+      const msg = err instanceof Error ? err.message : 'Failed to load model'
+      setError(
+        /shader-f16/i.test(msg)
+          ? 'WebGPU shader-f16 is unavailable and the q4f32 fallback also failed. Use latest Chrome or Edge with WebGPU enabled, and enough VRAM (~2.5GB free for q4f32).'
+          : msg,
+      )
     }
   }
 
@@ -68,6 +75,7 @@ export function Forge() {
         setPhase('loading')
         setProgress(report)
       })
+      setModelLabel(getModelLabel())
       setQuest(pack)
       setPendingQuest(pack)
       setPhase('done')
@@ -97,9 +105,10 @@ export function Forge() {
         </p>
         <h1 className="text-2xl font-bold sm:text-3xl">Paste notes. Forge a quest.</h1>
         <p className="max-w-2xl text-sm leading-relaxed text-[color-mix(in_srgb,var(--color-parchment)_70%,transparent)]">
-          Runs <strong>{MODEL_LABEL}</strong> entirely in your browser via WebLLM.
+          Runs <strong>{modelLabel}</strong> entirely in your browser via WebLLM.
           Temperature is locked low so the model emits strict quiz JSON your dungeon can
-          play.
+          play. If your GPU lacks <code>shader-f16</code>, Forge auto-falls back to the
+          q4f32 Gemma build.
         </p>
       </header>
 

@@ -7,9 +7,18 @@ import type { QuestPack } from '../types/quest'
 import { MAX_NOTES_CHARS } from '../types/quest'
 import { parseQuestPack, questJsonSchema } from './questSchema'
 
-/** Same Gemma 2 2B IT weights; 1k context fits ~4GB VRAM + browser chrome */
-export const MODEL_ID = 'gemma-2-2b-it-q4f16_1-MLC-1k'
-export const MODEL_LABEL = 'Gemma 2 2B IT (WebLLM q4f16, 1k context)'
+/** Prefers f16 (less VRAM); falls back to f32 when shader-f16 is unavailable. */
+const MODEL_F16 = 'gemma-2-2b-it-q4f16_1-MLC-1k'
+const MODEL_F32 = 'gemma-2-2b-it-q4f32_1-MLC'
+
+let selectedModelId = MODEL_F16
+let selectedModelLabel =
+  'Gemma 2 2B IT (WebLLM q4f16, 1k context)'
+
+/** @deprecated use getModelId() — kept for call sites that read a constant */
+export const MODEL_ID = MODEL_F16
+/** @deprecated use getModelLabel() */
+export const MODEL_LABEL = selectedModelLabel
 
 let enginePromise: Promise<MLCEngine> | null = null
 let engine: MLCEngine | null = null
@@ -17,6 +26,14 @@ let engine: MLCEngine | null = null
 export type LoadProgress = {
   progress: number
   text: string
+}
+
+export function getModelId() {
+  return selectedModelId
+}
+
+export function getModelLabel() {
+  return selectedModelLabel
 }
 
 export async function hasWebGPU(): Promise<boolean> {
@@ -27,6 +44,37 @@ export async function hasWebGPU(): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+/** True when the GPU adapter advertises the shader-f16 feature WebLLM f16 builds need. */
+export async function hasShaderF16(): Promise<boolean> {
+  if (!navigator.gpu) return false
+  try {
+    const adapter = await navigator.gpu.requestAdapter()
+    if (!adapter) return false
+    return adapter.features.has('shader-f16')
+  } catch {
+    return false
+  }
+}
+
+async function pickModel(): Promise<{ id: string; label: string }> {
+  const f16 = await hasShaderF16()
+  if (f16) {
+    return {
+      id: MODEL_F16,
+      label: 'Gemma 2 2B IT (WebLLM q4f16, 1k context)',
+    }
+  }
+  return {
+    id: MODEL_F32,
+    label: 'Gemma 2 2B IT (WebLLM q4f32 — no shader-f16 on this GPU)',
+  }
+}
+
+function isShaderF16Error(err: unknown) {
+  const msg = err instanceof Error ? err.message : String(err)
+  return /shader-f16|f16/i.test(msg)
 }
 
 export function isEngineReady() {
@@ -46,22 +94,48 @@ export async function loadEngine(
     )
   }
 
-  enginePromise = CreateMLCEngine(MODEL_ID, {
-    initProgressCallback: (report: InitProgressReport) => {
-      onProgress?.({
-        progress: report.progress,
-        text: report.text,
+  const picked = await pickModel()
+  selectedModelId = picked.id
+  selectedModelLabel = picked.label
+
+  enginePromise = (async () => {
+    const tryCreate = async (modelId: string) =>
+      CreateMLCEngine(modelId, {
+        initProgressCallback: (report: InitProgressReport) => {
+          onProgress?.({
+            progress: report.progress,
+            text: `${selectedModelLabel}: ${report.text}`,
+          })
+        },
       })
-    },
-  })
-    .then((created) => {
+
+    try {
+      const created = await tryCreate(selectedModelId)
       engine = created
       return created
-    })
-    .catch((err) => {
+    } catch (err) {
+      // Probe can miss; if f16 fails, retry the f32 build once.
+      if (selectedModelId === MODEL_F16 && isShaderF16Error(err)) {
+        selectedModelId = MODEL_F32
+        selectedModelLabel =
+          'Gemma 2 2B IT (WebLLM q4f32 — shader-f16 unavailable)'
+        onProgress?.({
+          progress: 0,
+          text: 'shader-f16 missing — retrying with q4f32 Gemma…',
+        })
+        try {
+          const created = await tryCreate(MODEL_F32)
+          engine = created
+          return created
+        } catch (retryErr) {
+          enginePromise = null
+          throw retryErr
+        }
+      }
       enginePromise = null
       throw err
-    })
+    }
+  })()
 
   return enginePromise
 }

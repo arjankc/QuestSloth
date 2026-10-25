@@ -13,7 +13,7 @@ Built for [Hacktoberfest Open-Source AI Challenge: Week 3 — Slow and Steady](h
 ## Stack
 
 - Vite + React + TypeScript + Tailwind CSS
-- `@mlc-ai/web-llm` · model `gemma-2-2b-it-q4f16_1-MLC-1k` (Gemma 2 2B IT, ~1.5GB, fits ~4GB VRAM)
+- `@mlc-ai/web-llm` · prefers `gemma-2-2b-it-q4f16_1-MLC-1k` (~1.5GB); auto-falls back to `gemma-2-2b-it-q4f32_1-MLC` (~2.5GB) when WebGPU `shader-f16` is missing
 - Static host: GitHub Pages (`base: '/QuestSloth/'`, HashRouter)
 
 ## Modes
