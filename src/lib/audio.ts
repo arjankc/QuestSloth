@@ -225,25 +225,9 @@ export function playSfx(name: SfxName, options: SfxOptions = {}) {
       sfxTone({ freq: 880, duration: 0.2, type: 'triangle', gain: 0.08, when: when + 0.12 })
       sfxNoise({ duration: 0.12, gain: 0.1, when: when + 0.02, cutoff: 2400 })
       break
-    case 'crit':
-      sfxTone({ freq: 880, duration: 0.2, type: 'sawtooth', gain: 0.1, when, slideTo: 220 })
-      sfxNoise({ duration: 0.16, gain: 0.16, when, cutoff: 3200 })
-      sfxTone({ freq: 1318.51, duration: 0.22, type: 'triangle', gain: 0.09, when: when + 0.03 })
-      sfxTone({ freq: 1760, duration: 0.18, type: 'triangle', gain: 0.06, when: when + 0.1 })
-      break
     case 'miss':
       sfxTone({ freq: 200, duration: 0.3, type: 'sawtooth', gain: 0.14, when, slideTo: 70 })
       sfxNoise({ duration: 0.18, gain: 0.12, when, cutoff: 520 })
-      break
-    case 'block':
-      sfxTone({ freq: 520, duration: 0.14, gain: 0.12, when })
-      sfxTone({ freq: 780, duration: 0.18, type: 'triangle', gain: 0.08, when: when + 0.02 })
-      sfxNoise({ duration: 0.08, gain: 0.08, when, cutoff: 2600 })
-      break
-    case 'power':
-      sfxTone({ freq: 392, duration: 0.14, type: 'triangle', gain: 0.08, when })
-      sfxTone({ freq: 587.33, duration: 0.18, type: 'triangle', gain: 0.08, when: when + 0.07 })
-      sfxTone({ freq: 880, duration: 0.26, type: 'triangle', gain: 0.07, when: when + 0.14 })
       break
     case 'block':
       sfxTone({ freq: 640, duration: 0.08, type: 'triangle', gain: 0.1, when })
@@ -308,20 +292,6 @@ export function playSfx(name: SfxName, options: SfxOptions = {}) {
           when: when + index * 0.1,
         })
       })
-      break
-    }
-    case 'achievement': {
-      const notes = [783.99, 987.77, 1174.66, 1567.98]
-      notes.forEach((freq, index) => {
-        sfxTone({
-          freq,
-          duration: 0.18,
-          type: 'triangle',
-          gain: 0.08,
-          when: when + index * 0.09,
-        })
-      })
-      sfxNoise({ duration: 0.12, gain: 0.04, when: when + 0.3, cutoff: 4200 })
       break
     }
     case 'achievement':
@@ -408,6 +378,10 @@ function scheduleMusicStep(step: number, at: number) {
 
 function schedulerTick() {
   if (!ctx || musicMode === 'off') return
+  // After a backgrounded tab, skip missed steps instead of firing a burst.
+  if (nextNoteTime < ctx.currentTime - 0.1) {
+    nextNoteTime = ctx.currentTime + 0.05
+  }
   const stepLen = stepSeconds()
   while (nextNoteTime < ctx.currentTime + 0.12) {
     scheduleMusicStep(musicStep, nextNoteTime)
